@@ -1,0 +1,7 @@
+{
+  "name": "Agent BREW · Launchpad Radar",
+  "description": "Autonomous Launchpad Radar & Tactical Analyzer for 2,080+ BREW tokens on BNB Chain with GoPlus security audits, DEX order flow, on-chain artwork decoding, Copilot intelligence, and real-time Supabase visitor tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
