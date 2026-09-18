@@ -126,14 +126,24 @@ app.get('/api/tokens', async (req, res) => {
           }, {});
 
           const tokens = rows.map((r, idx) => {
-            const rawImg = r.image_url || '';
+            let rawImg = r.raw_data?.imageUrl || r.raw_data?.image || '';
+            if (!rawImg && r.image_url && !r.image_url.includes('dd.dexscreener.com')) {
+              rawImg = r.image_url;
+            }
+            if (!rawImg) {
+              rawImg = r.image_url || '';
+            }
+
             let artContract = '';
             let logoUrl = '';
+
             if (typeof rawImg === 'string' && rawImg.startsWith('onchain://56/')) {
-              artContract = rawImg.replace('onchain://56/', '').toLowerCase();
+              artContract = rawImg.replace('onchain://56/', '').toLowerCase().trim();
               logoUrl = `/api/artwork/${artContract}`;
-            } else if (typeof rawImg === 'string' && rawImg.startsWith('http')) {
+            } else if (typeof rawImg === 'string' && (rawImg.startsWith('data:image') || (rawImg.startsWith('http') && !rawImg.includes('dd.dexscreener.com')))) {
               logoUrl = rawImg;
+            } else if (typeof r.image_url === 'string' && (r.image_url.startsWith('data:image') || (r.image_url.startsWith('http') && !r.image_url.includes('dd.dexscreener.com')))) {
+              logoUrl = r.image_url;
             }
 
             const cAddr = String(r.creator || '').toLowerCase().trim();
@@ -226,13 +236,13 @@ app.get('/api/tokens', async (req, res) => {
     const multiTokenDevsCount = Object.values(creatorCounts).filter((cnt: any) => cnt > 1).length;
 
     const tokens = launches.map((l: any, idx: number) => {
-      const rawImg = l.imageUrl || '';
+      const rawImg = l.imageUrl || l.image || '';
       let artContract = '';
       let logoUrl = '';
       if (typeof rawImg === 'string' && rawImg.startsWith('onchain://56/')) {
-        artContract = rawImg.replace('onchain://56/', '').toLowerCase();
+        artContract = rawImg.replace('onchain://56/', '').toLowerCase().trim();
         logoUrl = `/api/artwork/${artContract}`;
-      } else if (typeof rawImg === 'string' && rawImg.startsWith('http')) {
+      } else if (typeof rawImg === 'string' && (rawImg.startsWith('data:image') || rawImg.startsWith('http'))) {
         logoUrl = rawImg;
       }
 
@@ -358,10 +368,12 @@ app.get('/api/artworks', async (req, res) => {
   }
 });
 
-// 6b. Single binary artwork image endpoint with caching
+// 6b. Single binary artwork image endpoint with caching, multi-format decoder, and CORS
 app.get('/api/artwork/:address', async (req, res) => {
   const addr = (req.params.address || '').toLowerCase().trim();
   if (!addr) return res.status(404).send('Missing address');
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
   if (artworkBufferCache.has(addr)) {
     const cached = artworkBufferCache.get(addr)!;
@@ -371,21 +383,81 @@ app.get('/api/artwork/:address', async (req, res) => {
   }
 
   try {
-    const data = await requestJson(`https://brew.family/api/shared/artwork/${addr}`);
-    if (data && data.image) {
-      const match = data.image.match(/^data:([^;]+);base64,(.+)$/);
-      if (match) {
-        const mime = match[1];
-        const buf = Buffer.from(match[2], 'base64');
-        artworkBufferCache.set(addr, { mime, buf });
-        res.setHeader('Content-Type', mime);
-        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-        return res.send(buf);
-      } else if (data.image.startsWith('http')) {
-        return res.redirect(data.image);
+    const upstreamRes = await fetch(`https://brew.family/api/shared/artwork/${addr}`, {
+      headers: {
+        'Accept': 'application/json, image/*, text/html, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
+    });
+
+    if (!upstreamRes.ok) {
+      return res.status(404).send('Artwork not found upstream');
     }
-    return res.status(404).send('Artwork not found');
+
+    const contentType = upstreamRes.headers.get('content-type') || '';
+
+    // If upstream returns direct image binary or SVG
+    if (contentType.includes('image/') || contentType.includes('svg')) {
+      const arrayBuf = await upstreamRes.arrayBuffer();
+      const buf = Buffer.from(arrayBuf);
+      const mime = contentType.split(';')[0] || 'image/svg+xml';
+      artworkBufferCache.set(addr, { mime, buf });
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      return res.send(buf);
+    }
+
+    const text = await upstreamRes.text();
+
+    // If response body is raw SVG
+    if (text.trim().startsWith('<svg') || text.includes('</svg>')) {
+      const buf = Buffer.from(text, 'utf-8');
+      const mime = 'image/svg+xml';
+      artworkBufferCache.set(addr, { mime, buf });
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      return res.send(buf);
+    }
+
+    // Try parsing as JSON payload
+    try {
+      const data = JSON.parse(text);
+      const rawImg = data?.image || data?.artwork || data?.svg || data?.data;
+      if (rawImg && typeof rawImg === 'string') {
+        if (rawImg.startsWith('data:image')) {
+          if (rawImg.includes(';base64,')) {
+            const parts = rawImg.split(';base64,');
+            const mime = parts[0].replace('data:', '');
+            const buf = Buffer.from(parts[1], 'base64');
+            artworkBufferCache.set(addr, { mime, buf });
+            res.setHeader('Content-Type', mime);
+            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            return res.send(buf);
+          } else {
+            const commaIdx = rawImg.indexOf(',');
+            const header = rawImg.slice(0, commaIdx);
+            const content = decodeURIComponent(rawImg.slice(commaIdx + 1));
+            const mime = header.split(';')[0].replace('data:', '') || 'image/svg+xml';
+            const buf = Buffer.from(content, 'utf-8');
+            artworkBufferCache.set(addr, { mime, buf });
+            res.setHeader('Content-Type', mime);
+            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            return res.send(buf);
+          }
+        } else if (rawImg.startsWith('http')) {
+          return res.redirect(rawImg);
+        } else if (rawImg.startsWith('<svg')) {
+          const buf = Buffer.from(rawImg, 'utf-8');
+          const mime = 'image/svg+xml';
+          artworkBufferCache.set(addr, { mime, buf });
+          res.setHeader('Content-Type', mime);
+          res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+          return res.send(buf);
+        }
+      }
+    } catch {}
+
+    return res.status(404).send('Artwork format unrecognized');
   } catch (err: any) {
     return res.status(404).send('Artwork load failed');
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { resolveArtwork, getCachedArtworkSync } from '../utils/artworkResolver.ts';
 
 interface TokenAvatarProps {
   symbol: string;
@@ -27,6 +28,21 @@ function getAvatarGradient(address: string): string {
   return palettes[charCode % palettes.length];
 }
 
+function extractContract(raw: string): string {
+  if (!raw) return '';
+  let str = raw.toLowerCase().trim();
+  if (str.startsWith('onchain://56/')) {
+    str = str.replace('onchain://56/', '');
+  } else if (str.includes('/api/shared/artwork/')) {
+    str = str.split('/api/shared/artwork/')[1] || str;
+  } else if (str.includes('/api/artwork/')) {
+    str = str.split('/api/artwork/')[1] || str;
+  }
+  const clean = str.split('?')[0].trim();
+  if (/^0x[a-f0-9]{40}$/i.test(clean)) return clean;
+  return '';
+}
+
 export const TokenAvatar: React.FC<TokenAvatarProps> = ({
   symbol,
   address,
@@ -36,44 +52,93 @@ export const TokenAvatar: React.FC<TokenAvatarProps> = ({
   size = 'md',
   className = ''
 }) => {
-  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+  const artContract = onchainArtworkContract || extractContract(logoUrl || '') || '';
+
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(() => {
+    if (logoUrl && (logoUrl.startsWith('data:image') || logoUrl.startsWith('blob:'))) {
+      return logoUrl;
+    }
+    const cached = getCachedArtworkSync(artContract) || getCachedArtworkSync(logoUrl || '') || getCachedArtworkSync(address || '');
+    if (cached) return cached;
+    if (logoUrl && logoUrl.startsWith('http') && !logoUrl.includes('/api/shared/artwork/')) {
+      return logoUrl;
+    }
+    return null;
+  });
+
   const [attempt, setAttempt] = useState<number>(0);
   const [hasFailedAll, setHasFailedAll] = useState<boolean>(false);
 
-  // Candidates list in order of priority
+  // Build clean list of candidate URLs
   const candidates = React.useMemo(() => {
     const list: string[] = [];
-    if (logoUrl && logoUrl.trim()) list.push(logoUrl);
-    if (onchainArtworkContract && onchainArtworkContract.trim()) {
-      list.push(`/api/artwork/${onchainArtworkContract.toLowerCase()}`);
-      list.push(`https://brew.family/api/shared/artwork/${onchainArtworkContract.toLowerCase()}`);
+    const addr = (address || '').toLowerCase().trim();
+
+    // 1. If we have a verified resolved data/blob URI, prioritize it
+    if (resolvedSrc) {
+      list.push(resolvedSrc);
     }
-    if (fallbackLogoUrl && fallbackLogoUrl.trim()) list.push(fallbackLogoUrl);
-    if (address && address.trim()) {
-      list.push(`https://dd.dexscreener.com/ds-data/tokens/bsc/${address.toLowerCase()}.png`);
+
+    // 2. Direct data URI or proxy URL from logoUrl
+    if (logoUrl && (logoUrl.startsWith('data:image') || logoUrl.startsWith('/api/artwork/'))) {
+      if (!list.includes(logoUrl)) list.push(logoUrl);
     }
-    return Array.from(new Set(list));
-  }, [logoUrl, fallbackLogoUrl, onchainArtworkContract, address]);
+
+    // 3. Internal API artwork endpoint for decoded on-chain SVG / WebP
+    if (artContract && /^0x[a-f0-9]{40}$/i.test(artContract)) {
+      const internalUrl = `/api/artwork/${artContract}`;
+      if (!list.includes(internalUrl)) list.push(internalUrl);
+    }
+
+    // 4. Regular HTTP image (Dexscreener CDN, IPFS, etc.)
+    if (logoUrl && logoUrl.trim() && !logoUrl.includes('/api/shared/artwork/') && !logoUrl.includes('dd.dexscreener.com') && !list.includes(logoUrl)) {
+      list.push(logoUrl);
+    }
+
+    // 5. Fallbacks from trusted token repositories
+    if (fallbackLogoUrl && fallbackLogoUrl.trim() && !fallbackLogoUrl.includes('dd.dexscreener.com') && !list.includes(fallbackLogoUrl)) {
+      list.push(fallbackLogoUrl);
+    }
+    if (addr && /^0x[a-f0-9]{40}$/i.test(addr)) {
+      list.push(`https://tokens.pancakeswap.finance/images/${addr}.png`);
+      list.push(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/assets/${addr}/logo.png`);
+    }
+
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [resolvedSrc, artContract, logoUrl, fallbackLogoUrl, address]);
+
+  // Asynchronously resolve on-chain artwork contract to data URI
+  useEffect(() => {
+    let isMounted = true;
+    const target = artContract || logoUrl;
+
+    if (target && !resolvedSrc?.startsWith('data:image')) {
+      resolveArtwork(target).then(res => {
+        if (isMounted && res) {
+          setResolvedSrc(res);
+          setHasFailedAll(false);
+        }
+      });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [artContract, logoUrl]);
 
   useEffect(() => {
     setAttempt(0);
     setHasFailedAll(false);
-    if (candidates.length > 0) {
-      setCurrentSrc(candidates[0]);
-    } else {
-      setCurrentSrc(null);
-      setHasFailedAll(true);
-    }
   }, [candidates]);
+
+  const currentSrc = candidates[attempt] || null;
 
   const handleError = () => {
     const nextAttempt = attempt + 1;
     if (nextAttempt < candidates.length) {
       setAttempt(nextAttempt);
-      setCurrentSrc(candidates[nextAttempt]);
     } else {
       setHasFailedAll(true);
-      setCurrentSrc(null);
     }
   };
 
@@ -109,6 +174,7 @@ export const TokenAvatar: React.FC<TokenAvatarProps> = ({
         src={currentSrc}
         alt={symbol}
         loading="lazy"
+        referrerPolicy="no-referrer"
         onError={handleError}
         className="w-full h-full object-cover"
       />

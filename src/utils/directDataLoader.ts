@@ -124,13 +124,13 @@ export async function fetchTokensWithFallback(isManual: boolean = false): Promis
     const multiTokenDevsCount = Object.values(creatorCounts).filter((cnt: any) => cnt > 1).length;
 
     const tokens: Token[] = launches.map((l: any, idx: number) => {
-      const rawImg = l.imageUrl || '';
+      const rawImg = l.imageUrl || l.image || '';
       let artContract = '';
       let logoUrl = '';
       if (typeof rawImg === 'string' && rawImg.startsWith('onchain://56/')) {
-        artContract = rawImg.replace('onchain://56/', '').toLowerCase();
-        logoUrl = `https://brew.family/api/shared/artwork/${artContract}`;
-      } else if (typeof rawImg === 'string' && rawImg.startsWith('http')) {
+        artContract = rawImg.replace('onchain://56/', '').toLowerCase().trim();
+        logoUrl = `/api/artwork/${artContract}`;
+      } else if (typeof rawImg === 'string' && (rawImg.startsWith('data:image') || rawImg.startsWith('http'))) {
         logoUrl = rawImg;
       }
 
