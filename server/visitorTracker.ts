@@ -161,16 +161,36 @@ async function recordVisitorInSupabase(
 
 // Build stats object
 async function getVisitorStats() {
-  // Clean up sessions older than 35s
+  // Clean up sessions older than 45s
   const now = Date.now();
   for (const [id, session] of activeSessions.entries()) {
-    if (now - session.lastPing > 35000) {
+    if (now - session.lastPing > 45000) {
       activeSessions.delete(id);
     }
   }
 
+  // Cross-device active visitors from Supabase
+  let supaActive = 0;
+  if (SERVICE_KEY && !SERVICE_KEY.startsWith('replace_') && !SERVICE_KEY.startsWith('sb_publishable_')) {
+    try {
+      const cutoff = new Date(now - 45000).toISOString();
+      const res = await requestJson(`${SUPABASE_URL}/rest/v1/brew_visitors?select=session_id,last_ping&last_ping=gte.${cutoff}&is_active=eq.true&limit=1000`, {
+        headers: {
+          'apikey': SERVICE_KEY,
+          'Authorization': `Bearer ${SERVICE_KEY}`
+        }
+      });
+      if (Array.isArray(res)) {
+        const set = new Set<string>();
+        res.forEach((r: any) => { if (r.session_id) set.add(r.session_id); });
+        for (const id of activeSessions.keys()) set.add(id);
+        supaActive = set.size;
+      }
+    } catch {}
+  }
+
   const supa = await checkSupabaseVisitors();
-  const activeCount = Math.max(activeSessions.size, 1); // at least 1 when requester checks
+  const activeCount = Math.max(supaActive, activeSessions.size, 1);
   const totalCount = supa.ready && supa.count !== null && supa.count > 0
     ? supa.count
     : localStats.totalVisits;

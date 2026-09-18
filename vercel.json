@@ -2,8 +2,16 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/artwork/:address",
+      "destination": "/api/artwork/[address]"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

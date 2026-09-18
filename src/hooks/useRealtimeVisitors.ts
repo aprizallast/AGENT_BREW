@@ -12,7 +12,7 @@ function getOrCreateSessionId(): string {
     }
     return id;
   } catch {
-    return 'bw_fallback_' + Math.random().toString(36).slice(2, 10);
+    return 'bw_fallback_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
   }
 }
 
@@ -25,7 +25,7 @@ export function useRealtimeVisitors() {
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
 
-  // Ping backend to register presence & log visit
+  // Ping backend to register presence & get accurate live counts
   const sendPing = useCallback(async () => {
     try {
       const res = await fetch('/api/visitors/ping', {
@@ -39,20 +39,21 @@ export function useRealtimeVisitors() {
       });
       if (res.ok) {
         const data = await res.json();
-        setStats(prev => ({ ...prev, ...data }));
-        setIsConnected(true);
-      } else {
-        // Fallback for static Vercel deployment: keep live active status
+        setStats(prev => ({
+          ...prev,
+          activeVisitors: Math.max(Number(data.activeVisitors) || 1, 1),
+          totalVisits: Number(data.totalVisits) || prev.totalVisits,
+          uniqueVisitors: Number(data.uniqueVisitors) || prev.uniqueVisitors
+        }));
         setIsConnected(true);
       }
     } catch {
-      setIsConnected(true);
+      // Keep existing count on transient network issue
     }
   }, []);
 
-  // Subscribe to SSE stream for zero-latency live updates
   useEffect(() => {
-    // Initial ping
+    // Initial ping on load
     sendPing();
 
     let eventSource: EventSource | null = null;
@@ -61,24 +62,36 @@ export function useRealtimeVisitors() {
       eventSource.addEventListener('visitor_update', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          setStats(prev => ({ ...prev, ...data }));
+          setStats(prev => ({
+            ...prev,
+            activeVisitors: Math.max(Number(data.activeVisitors) || 1, 1),
+            totalVisits: Number(data.totalVisits) || prev.totalVisits,
+            uniqueVisitors: Number(data.uniqueVisitors) || prev.uniqueVisitors
+          }));
           setIsConnected(true);
         } catch {}
       });
 
       eventSource.onerror = () => {
-        // SSE reconnects automatically
+        // SSE reconnects automatically or falls back to polling
       };
     } catch {
-      // fallback to polling
+      // SSE not supported
     }
 
-    // Ping interval every 12 seconds while window is active
+    // Ping every 10 seconds to keep session alive across devices
     const pingTimer = setInterval(() => {
       if (!document.hidden) {
         sendPing();
       }
-    }, 12000);
+    }, 10000);
+
+    // Refresh immediately when user switches back to the tab
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        sendPing();
+      }
+    };
 
     // Leave beacon on tab close / reload
     const handleLeave = () => {
@@ -97,12 +110,16 @@ export function useRealtimeVisitors() {
       } catch {}
     };
 
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
     window.addEventListener('beforeunload', handleLeave);
     window.addEventListener('pagehide', handleLeave);
 
     return () => {
       clearInterval(pingTimer);
       if (eventSource) eventSource.close();
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleLeave);
       window.removeEventListener('pagehide', handleLeave);
     };

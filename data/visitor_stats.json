@@ -1,7 +1,11 @@
 {
-  "totalVisits": 143,
+  "totalVisits": 168,
   "uniqueSessions": [
-    "test_session_123"
+    "test_session_123",
+    "bw_ql1y64zzf_mu74895l",
+    "device_phone_alpha_01",
+    "device_laptop_beta_02",
+    "device_tablet_gamma_03"
   ],
-  "lastVisitAt": "2026-09-18T15:30:26.706Z"
+  "lastVisitAt": "2026-09-18T17:00:43.803Z"
 }
