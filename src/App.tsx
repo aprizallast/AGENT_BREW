@@ -10,6 +10,7 @@ import { DevClusterView } from './components/DevClusterView.tsx';
 import { DetailModal } from './components/DetailModal.tsx';
 import { useRealtimeVisitors } from './hooks/useRealtimeVisitors.ts';
 import { playAlertChime } from './utils/format.ts';
+import { fetchTokensWithFallback, inspectContractDirect } from './utils/directDataLoader.ts';
 import { Rocket, ExternalLink } from 'lucide-react';
 
 const FACTORY_ADDRESS = '0xeea6c3bfb29fd9a35380438956bae7b109c63d85';
@@ -99,13 +100,11 @@ export default function App() {
     localStorage.setItem('agent_brew_lang', newLang);
   };
 
-  // 1. Fetch Tokens Data
+  // 1. Fetch Tokens Data with Automatic Direct Fallback
   const loadData = useCallback(async (isManual = false) => {
     try {
       if (isManual) setIsSyncing(true);
-      const res = await fetch(`/api/tokens${isManual ? '?force=true' : ''}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchTokensWithFallback(isManual);
 
       if (data && Array.isArray(data.tokens) && data.tokens.length > 0) {
         // Detect if a new token was launched since last check
@@ -123,11 +122,14 @@ export default function App() {
         if (data.stats) setStats(data.stats);
         if (data.totalLaunches) setTotalLaunches(data.totalLaunches);
 
-        if (isManual) showToast(`✅ Synced ${data.tokens.length} tokens successfully!`);
+        if (isManual) {
+          const sourceLabel = data.source === 'direct_brew_dex' ? ' (Direct Cloud)' : '';
+          showToast(`✅ Synced ${data.tokens.length} tokens successfully!${sourceLabel}`);
+        }
       }
     } catch (err: any) {
       console.error('Failed to load token data:', err);
-      if (isManual) showToast('Sync failed: ' + (err.message || 'Check server connection'));
+      if (isManual) showToast('Sync failed: ' + (err.message || 'Check network connection'));
     } finally {
       if (isManual) setIsSyncing(false);
     }
@@ -145,9 +147,7 @@ export default function App() {
   const handleTrackCustom = async (address: string) => {
     showToast(`Inspecting contract ${address.slice(0, 6)}...`);
     try {
-      const res = await fetch(`/api/inspect?address=${encodeURIComponent(address)}`);
-      if (!res.ok) throw new Error(`Failed to inspect contract`);
-      const data = await res.json();
+      const data = await inspectContractDirect(address);
 
       const pair = data.pair;
       const bl = data.brewLaunch;
@@ -159,26 +159,27 @@ export default function App() {
         pool: bl?.pool || pair?.pairAddress || '',
         creator: data.creator || bl?.creator || sec?.creator_address || '',
         creatorLaunchCount: 1,
-        name: bl?.name || pair?.baseToken?.name || 'Brew Custom Token',
-        symbol: bl?.symbol || pair?.baseToken?.symbol || 'BREW',
+        name: bl?.name || pair?.baseToken?.name || data.name || 'Brew Custom Token',
+        symbol: bl?.symbol || pair?.baseToken?.symbol || data.symbol || 'BREW',
         quoteSymbol: pair?.quoteToken?.symbol || 'WBNB',
+        quoteAddress: pair?.quoteToken?.address || '',
         launchedAt: Date.now(),
         blockNumber: 0,
         txHash: '',
         logoUrl: bl?.imageUrl || pair?.info?.imageUrl || '',
         fallbackLogoUrl: `https://dd.dexscreener.com/ds-data/tokens/bsc/${address}.png`,
-        priceUsd: pair ? parseFloat(pair.priceUsd) || 0 : 0,
+        priceUsd: pair ? parseFloat(pair.priceUsd) || 0 : (data.priceUsd || 0),
         priceChange24h: pair?.priceChange?.h24 != null ? Number(pair.priceChange.h24) : 0,
-        volume24h: pair?.volume?.h24 != null ? Number(pair.volume.h24) : 0,
-        liquidityUsd: pair?.liquidity?.usd != null ? Number(pair.liquidity.usd) : 0,
-        marketCap: pair ? Number(pair.marketCap || pair.fdv || 0) : 0,
+        volume24h: pair?.volume?.h24 != null ? Number(pair.volume.h24) : (data.volume24h || 0),
+        liquidityUsd: pair?.liquidity?.usd != null ? Number(pair.liquidity.usd) : (data.liquidityUsd || 0),
+        marketCap: pair ? Number(pair.marketCap || pair.fdv || 0) : (data.marketCap || 0),
         buys24h: pair?.txns?.h24?.buys || 0,
         sells24h: pair?.txns?.h24?.sells || 0,
         buyRatio: 1,
         agentScore: 60,
         agentVerdict: 'TRACKED',
         agentSignals: ['Added via custom contract inspection', 'BSC active pair'],
-        dexUrl: pair?.url || `https://dexscreener.com/bsc/${address}`,
+        dexUrl: pair?.url || data.dexUrl || `https://dexscreener.com/bsc/${address}`,
         brewUrl: `https://brew.family/token/${address}`,
         bubblemapsUrl: `https://bubblemaps.io/bsc/token/${address}`,
         bscscanTokenUrl: `https://bscscan.com/token/${address}`,

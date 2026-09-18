@@ -310,8 +310,8 @@ app.get('/api/tokens', async (req, res) => {
   }
 });
 
-// 3. Trigger full sync
-app.post('/api/sync', async (req, res) => {
+// 3. Trigger full sync (supports both POST and GET for cron webhooks and browser testing)
+app.all('/api/sync', async (req, res) => {
   try {
     const payload = await runFullSync();
     cachedSnapshot = payload;
