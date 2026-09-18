@@ -21,8 +21,8 @@ const argsPayload: ScriptArgs = (typeof process !== 'undefined' && process.argv)
     }, {})
   : {};
 
-export const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ghnknzsamneurnvrbzin.supabase.co';
-export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+export const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://cqgocwsqhsqdkyphfvvy.supabase.co';
+export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZ29jd3NxaHNxZGt5cGhmdnZ5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjU0MjczMSwiZXhwIjoyMDg4MTE4NzMxfQ.25G6wE90KevLhB_47uI4c1o5Q_wR7qWj4_vF_1z_3_4';
 
 export async function requestJson(url: string, options: RequestInit = {}) {
   const response = await fetch(url, {
