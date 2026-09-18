@@ -61,8 +61,8 @@ export default function App() {
         }
       });
 
-      setTokens(prev =>
-        prev.map(tok => {
+      setTokens(prev => {
+        const next = prev.map(tok => {
           const p = bestPairs[tok.address.toLowerCase()];
           if (!p) return tok;
           return {
@@ -79,8 +79,29 @@ export default function App() {
             sells24h: Number(p.txns?.h24?.sells || tok.sells24h),
             buyRatio: tok.sells24h > 0 ? Math.round((tok.buys24h / tok.sells24h) * 100) / 100 : tok.buyRatio
           };
-        })
-      );
+        });
+
+        // Recalculate market stats dynamically
+        let totalVol = 0;
+        let totalMcap = 0;
+        let activePairs = 0;
+        next.forEach(t => {
+          if (t.volume24h > 0 || t.marketCap > 0 || t.liquidityUsd > 0) {
+            activePairs++;
+            totalVol += (t.volume24h || 0);
+            totalMcap += (t.marketCap || 0);
+          }
+        });
+
+        setStats(prevStats => ({
+          ...prevStats,
+          totalTrackedVol: Math.max(Math.round(totalVol * 100) / 100, prevStats.totalTrackedVol),
+          totalTrackedMcap: Math.max(Math.round(totalMcap * 100) / 100, prevStats.totalTrackedMcap),
+          activePairs: Math.max(activePairs, prevStats.activePairs)
+        }));
+
+        return next;
+      });
     } catch {
       // silent fallback
     }
