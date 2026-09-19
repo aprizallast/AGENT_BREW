@@ -57,7 +57,7 @@ export interface TokensPayload {
 export type ViewTab = 'radar' | 'copilot' | 'picks' | 'devs';
 export type FilterType = 'all' | 'newest' | 'dex-active' | 'top10-gainers' | 'top10-mcap' | 'top10-vol' | 'top10-potential' | 'serial-dev' | 'watchlist';
 export type SortKey = 'rank' | 'priceUsd' | 'priceChange24h' | 'marketCap' | 'volume24h' | 'liquidityUsd' | 'creatorLaunchCount' | 'agentScore';
-export type Language = 'en' | 'zh';
+export type Language = 'en' | 'zh' | 'ja';
 
 export interface VisitorStats {
   activeVisitors: number;

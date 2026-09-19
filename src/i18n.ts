@@ -45,7 +45,6 @@ export interface TranslationDict {
   sec4Title: string;
   sec5Title: string;
   newReleaseTitle: string;
-  // Additional translations
   allTokens: string;
   newestReleases: string;
   withDexLiq: string;
@@ -76,6 +75,28 @@ export interface TranslationDict {
   farmKing: string;
   liveOnline: string;
   totalVisitors: string;
+  // Hall of Fame
+  hofTitle: string;
+  hofSubtitle: string;
+  hofCritVol: string;
+  hofCritChange: string;
+  hofCritMcap: string;
+  hofRank1Badge: string;
+  hofRank2Badge: string;
+  hofRank3Badge: string;
+  hofInspectBtn: string;
+  hofTradeBtn: string;
+  hofPrice: string;
+  hof24hChange: string;
+  hofLiquidity: string;
+  hofDev: string;
+  hofAgentScore: string;
+  // Marquee & Controls
+  copyFactorySuccess: string;
+  syncSuccess: string;
+  syncing: string;
+  syncBtn: string;
+  copyBtn: string;
 }
 
 export const I18N: Record<Language, TranslationDict> = {
@@ -88,10 +109,10 @@ export const I18N: Record<Language, TranslationDict> = {
     activeDexSub: 'with DEX liquidity',
     volSub: 'PancakeSwap & BSC DEXs',
     mcapSub: 'Aggregate token valuation',
-    multiDevsSub: 'Wallets launched >1 token (risk)',
+    multiDevsSub: 'Wallets launched >1 token (dump risk)',
     tabRadar: '📊 Token Radar & DEX Live',
     tabCopilot: '🤖 Copilot Terminal',
-    tabPicks: '💎 Agent Top Picks',
+    tabPicks: '🏆 Hall of Fame & Top Picks',
     tabDevs: '🕵️ Dev Cluster Map',
     quickFilters: '⚡ Quick Filters:',
     singleDev: '🛡️ Single Dev (Focused)',
@@ -113,8 +134,8 @@ export const I18N: Record<Language, TranslationDict> = {
     thDev: 'Dev Cluster',
     thScore: 'Agent Score',
     thActions: 'Actions',
-    btnAnalyze: 'Analyze ↗',
-    btnSwap: 'Buy ⚡',
+    btnAnalyze: 'Audit ↗',
+    btnSwap: 'Trade ⚡',
     prevPage: '‹ Previous',
     nextPage: 'Next ›',
     modalTitle: 'Token Analysis & Dev Intel',
@@ -132,7 +153,7 @@ export const I18N: Record<Language, TranslationDict> = {
     topVol: '⚡ Top Volume',
     highestScore: '🤖 Highest Score',
     serialDevRisk: '🚨 Serial Dev Risk',
-    copilotGreeting: 'Hello! I am Agent BREW Tactical Terminal.\nOperating 100% deterministic intelligence analyzing 2,080+ token launches on brew.family (BNB Chain).\n\nSelect a tactical quick prompt below or type any token symbol (e.g. "BREW") or contract address (0x...) for instant audit!',
+    copilotGreeting: 'Hello! I am Agent BREW Tactical Terminal.\nOperating 100% deterministic intelligence analyzing 2,160+ token launches on brew.family (BNB Chain).\n\nSelect a tactical quick prompt below or type any token symbol (e.g. "BREW") or contract address (0x...) for instant audit!',
     copilotChip1: 'Top 3 High Conviction Picks',
     copilotChip2: 'Riskiest Serial Devs (>3 Tokens)',
     copilotChip3: 'Single-Dev Liquid Gems',
@@ -153,7 +174,27 @@ export const I18N: Record<Language, TranslationDict> = {
     liquidPairs: '💧 Active Liquidity Pools',
     farmKing: '👑 Farm King Record',
     liveOnline: 'online',
-    totalVisitors: 'visits'
+    totalVisitors: 'visits',
+    hofTitle: 'Hall of Fame · Champions Podium',
+    hofSubtitle: 'Real-time on-chain pinnacle rankings computed across 2,160+ BSC Brew launches',
+    hofCritVol: '24H Volume',
+    hofCritChange: '24H Gainers',
+    hofCritMcap: 'Market Cap',
+    hofRank1Badge: '👑 GRAND CHAMPION · #1',
+    hofRank2Badge: '🥈 RUNNER-UP · #2',
+    hofRank3Badge: '🥉 BRONZE · #3',
+    hofInspectBtn: 'Deep Audit',
+    hofTradeBtn: 'Trade DEX',
+    hofPrice: 'Price',
+    hof24hChange: '24h Change',
+    hofLiquidity: 'Liquidity',
+    hofDev: 'Dev',
+    hofAgentScore: 'Agent Score',
+    copyFactorySuccess: 'BrewFactory address copied to clipboard!',
+    syncSuccess: 'Database synced successfully!',
+    syncing: 'Syncing...',
+    syncBtn: 'Sync Database',
+    copyBtn: 'Copy Factory'
   },
   zh: {
     dbStatus: '⚡ Supabase 已连接',
@@ -164,10 +205,10 @@ export const I18N: Record<Language, TranslationDict> = {
     activeDexSub: '具有 DEX 流动性',
     volSub: 'PancakeSwap 及 BSC DEX',
     mcapSub: '代币综合估值',
-    multiDevsSub: '发布超1个代币的钱包 (存在跑路风险)',
+    multiDevsSub: '发布超1个代币的钱包 (存在抛售风险)',
     tabRadar: '📊 代币雷达与实时 DEX',
     tabCopilot: '🤖 战术智能终端',
-    tabPicks: '💎 AI 精选代币',
+    tabPicks: '🏆 名人堂与榜首精选',
     tabDevs: '🕵️ 开发者关联图谱',
     quickFilters: '⚡ 快捷筛选:',
     singleDev: '🛡️ 单一开发者 (专注)',
@@ -190,7 +231,7 @@ export const I18N: Record<Language, TranslationDict> = {
     thScore: 'AI 评分',
     thActions: '交易操作',
     btnAnalyze: '深度分析 ↗',
-    btnSwap: '快速买入 ⚡',
+    btnSwap: '快速交易 ⚡',
     prevPage: '‹ 上一页',
     nextPage: '下一页 ›',
     modalTitle: '代币深度分析与开发者情报',
@@ -208,7 +249,7 @@ export const I18N: Record<Language, TranslationDict> = {
     topVol: '⚡ 交易量榜首',
     highestScore: '🤖 最高评分',
     serialDevRisk: '🚨 连环发币风险',
-    copilotGreeting: '您好！我是 Agent BREW 战术智能终端。\n运行 100% 确定性算法，实时监控 brew.family (BNB Chain) 上的 2,080+ 代币发射。\n\n请点击下方快捷指令或输入代币符号 (如 "BREW")、合约地址 (0x...) 即可进行即时审计！',
+    copilotGreeting: '您好！我是 Agent BREW 战术智能终端。\n运行 100% 确定性算法，实时监控 brew.family (BNB Chain) 上的 2,160+ 代币发射。\n\n请点击下方快捷指令或输入代币符号 (如 "BREW")、合约地址 (0x...) 即可进行即时审计！',
     copilotChip1: '前 3 高确信度精选',
     copilotChip2: '极高风险连环发币者 (>3代币)',
     copilotChip3: '单一开发者流动性代币',
@@ -229,6 +270,122 @@ export const I18N: Record<Language, TranslationDict> = {
     liquidPairs: '💧 活跃流动性池',
     farmKing: '👑 历史发币之王',
     liveOnline: '在线',
-    totalVisitors: '访问'
+    totalVisitors: '访问',
+    hofTitle: '名人堂 · 荣耀领奖台',
+    hofSubtitle: '基于链上流动性池与 DEX 实盘数据实时计算出的殿堂级代币',
+    hofCritVol: '24H 交易量',
+    hofCritChange: '24H 涨幅榜',
+    hofCritMcap: '市值总额',
+    hofRank1Badge: '👑 殿堂冠军 · 第 1 名',
+    hofRank2Badge: '🥈 亚军代币 · 第 2 名',
+    hofRank3Badge: '🥉 季军代币 · 第 3 名',
+    hofInspectBtn: '深度审计',
+    hofTradeBtn: '立即交易',
+    hofPrice: '单价',
+    hof24hChange: '24H 涨跌',
+    hofLiquidity: '流动性',
+    hofDev: '开发者',
+    hofAgentScore: '评分',
+    copyFactorySuccess: 'BrewFactory 合约地址已复制到剪贴板！',
+    syncSuccess: '数据库已成功同步！',
+    syncing: '同步中...',
+    syncBtn: '同步数据库',
+    copyBtn: '复制合约'
+  },
+  ja: {
+    dbStatus: '⚡ Supabase 接続中',
+    totalLaunches: 'ローンチパッド総トークン数',
+    trackedVol: '24時間追跡取引高',
+    ecosystemFdv: 'エコシステム完全希薄化後時価総額',
+    multiDevs: '複数トークン開発者',
+    activeDexSub: 'DEX 流動性保有',
+    volSub: 'PancakeSwap & BSC DEX',
+    mcapSub: '集計トークン評価額',
+    multiDevsSub: '2つ以上のトークンを発行したウォレット（ダンプリスク）',
+    tabRadar: '📊 トークンレーダー & DEX ライブ',
+    tabCopilot: '🤖 戦術コパイロット端末',
+    tabPicks: '🏆 殿堂入りポディウム & 厳選銘柄',
+    tabDevs: '🕵️ 開発者クラスターマップ',
+    quickFilters: '⚡ クイックフィルター:',
+    singleDev: '🛡️ 単一開発者 (専念型)',
+    alertAudioOn: '🔔 アラート音声: ON',
+    alertAudioOff: '🔕 アラート音声: OFF',
+    trackContractBtn: '+ コントラクト追跡',
+    trackCustomPh: 'カスタムBSCコントラクト追跡 (0x...を入力)...',
+    searchPh: 'トークン名、シンボル、コントラクト、開発者アドレスを検索...',
+    thRank: '順位 / トークン',
+    thToken: 'トークン',
+    thPrice: '価格 (USD)',
+    thChange: '24時間変動率',
+    thMcap: '時価総額',
+    thMarketCap: '時価総額',
+    thVol: '24時間取引高',
+    thVolume24h: '24時間取引高',
+    thLiq: '流動性',
+    thLiquidity: '流動性',
+    thDev: '開発者クラスター',
+    thScore: 'AIスコア',
+    thActions: 'アクション',
+    btnAnalyze: '精密監査 ↗',
+    btnSwap: 'スワップ ⚡',
+    prevPage: '‹ 前へ',
+    nextPage: '次へ ›',
+    modalTitle: 'トークン詳細分析 & 開発者インテル',
+    sec1Title: '📊 市場指標 & オーダーフロー',
+    sec2Title: '🤖 戦術的判定 & セキュリティ監査',
+    sec3Title: '🕵️ 開発者 & 大口保有者インテル',
+    sec4Title: '💰 利益シミュレーター (動的ROI)',
+    sec5Title: '📑 コントラクト検証 & ブロックデータ',
+    newReleaseTitle: '新規トークンローンチ検知！',
+    allTokens: '🌐 すべての追跡トークン',
+    newestReleases: '🆕 最新リリース',
+    withDexLiq: '💧 DEX 流動性あり',
+    topGainers: '🚀 上昇率トップ',
+    topMcap: '🏆 時価総額トップ',
+    topVol: '⚡ 取引高トップ',
+    highestScore: '🤖 最高AIスコア',
+    serialDevRisk: '🚨 連続発行者リスク',
+    copilotGreeting: 'こんにちは！Agent BREW 戦術ターミナルです。\n100% 決定論的アルゴリズムにより、brew.family (BNB Chain) 上の 2,160+ トークンをリアルタイム監査しています。\n\n下記のクイックプロンプトを選択するか、トークンシンボル (例: "BREW") やコントラクトアドレス (0x...) を入力して即時監査を開始してください！',
+    copilotChip1: '高確信トップ3厳選銘柄',
+    copilotChip2: '最高リスク連続発行者 (>3トークン)',
+    copilotChip3: '単一開発者・高流動性ジェム',
+    copilotChip4: '現在最高取引高銘柄',
+    copilotChip5: '最新5トークンローンチ',
+    copilotInputPh: "Agent BREW に質問 (例: 'top picks', '安全トークン', 'ダンプリスク', 'BREW')...",
+    copilotSend: '送信',
+    copilotTopPicksTitle: '💎 高確信厳選ピック',
+    copilotRulesTitle: '⚙️ AIルールエンジン',
+    copilotRuleDev: '開発者フィルタリング: 3回以上ローンチした開発者は連続売り抜けリスクとして減点。',
+    copilotRuleLiq: '流動性しきい値: 流動性 $1,000 WBNB 超過で高い安定性加点。',
+    copilotRuleOrder: 'オーダーフローレーダー: 買い手蓄積と売り圧力比率をリアルタイム監視。',
+    copilotRuleSec: 'セキュリティスキャナー: GoPlus BSC Securityによるハニーポットおよび売買税の即時監査。',
+    picksDesc: 'DEXの深い流動性、買い手の蓄積圧力、クリーンな単一開発者の実績、およびBNB Chain上の持続的な24時間取引高に基づいてAgent BREWアルゴリズムが厳選した高確信トークンレーダー。',
+    devClusterTitle: '開発者ウォレットクラスタリング',
+    extremeSerial: '🚨 超高頻度連続発行者 (≥5)',
+    repeatDev: '⚠️ 複数回発行者 (3-4回)',
+    liquidPairs: '💧 アクティブ流動性プール',
+    farmKing: '👑 歴代発行記録ホルダー',
+    liveOnline: 'オンライン',
+    totalVisitors: 'アクセス',
+    hofTitle: '殿堂入り · チャンピオンポディウム',
+    hofSubtitle: '2,160+ の BSC Brew ローンチからオンチェーン流動性とDEX取引でリアルタイム算出された最高峰トークン',
+    hofCritVol: '24H 取引高',
+    hofCritChange: '24H 上昇率',
+    hofCritMcap: '時価総額',
+    hofRank1Badge: '👑 グランドチャンピオン · 第1位',
+    hofRank2Badge: '🥈 準優勝 · 第2位',
+    hofRank3Badge: '🥉 第3位 · ブロンズ',
+    hofInspectBtn: '精密監査',
+    hofTradeBtn: 'DEX 取引',
+    hofPrice: '現在価格',
+    hof24hChange: '24H 変動率',
+    hofLiquidity: '流動性',
+    hofDev: '開発者',
+    hofAgentScore: 'AIスコア',
+    copyFactorySuccess: 'BrewFactory コントラクトアドレスをコピーしました！',
+    syncSuccess: 'データベースの同期が完了しました！',
+    syncing: '同期中...',
+    syncBtn: 'データベース同期',
+    copyBtn: 'コントラクト複製'
   }
 };

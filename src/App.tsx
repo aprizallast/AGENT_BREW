@@ -11,7 +11,9 @@ import { DetailModal } from './components/DetailModal.tsx';
 import { useRealtimeVisitors } from './hooks/useRealtimeVisitors.ts';
 import { playAlertChime } from './utils/format.ts';
 import { fetchTokensWithFallback, inspectContractDirect, getInitialCachedPayload } from './utils/directDataLoader.ts';
-import { Rocket, ExternalLink } from 'lucide-react';
+import { CyberBackground } from './components/CyberBackground.tsx';
+import { LiveCyberMarquee } from './components/LiveCyberMarquee.tsx';
+import { Rocket, ExternalLink, ShieldCheck, Activity, Sparkles } from 'lucide-react';
 
 const FACTORY_ADDRESS = '0xeea6c3bfb29fd9a35380438956bae7b109c63d85';
 
@@ -126,9 +128,10 @@ export default function App() {
       if (data && Array.isArray(data.tokens) && data.tokens.length > 0) {
         // Detect if a new token was launched since last check
         setTokens(prev => {
-          if (prev.length > 0 && data.tokens.length > prev.length) {
+          if (prev.length > 0 && data.tokens.length > 0) {
             const fresh = data.tokens[0];
-            if (fresh && fresh.address !== prev[0]?.address) {
+            const prevFirst = prev[0];
+            if (fresh && prevFirst && fresh.address.toLowerCase() !== prevFirst.address.toLowerCase()) {
               setNewReleaseToken(fresh);
               if (audioEnabled) playAlertChime();
             }
@@ -153,11 +156,31 @@ export default function App() {
   }, [audioEnabled, showToast]);
 
   useEffect(() => {
+    // Initial fetch
     loadData(false);
+
+    // Auto-polling heartbeat every 12 seconds
     const interval = setInterval(() => {
-      if (!document.hidden) loadData(false);
-    }, 30000);
-    return () => clearInterval(interval);
+      if (!document.hidden) {
+        loadData(false);
+      }
+    }, 12000);
+
+    // Immediate check when user focuses or returns to tab
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData(false);
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [loadData]);
 
   // 2. Custom Contract Tracking
@@ -243,98 +266,121 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0c0a] text-[#f7f0e8] p-3 sm:p-5 font-sans relative selection:bg-amber-600 selection:text-stone-950">
-      {/* Background Radial Glow */}
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(217,119,6,0.07),rgba(45,30,22,0.25)_45%,transparent_75%)] -z-10" />
+    <div className="min-h-screen bg-[#0c0806] text-[#f7f0e8] font-sans relative selection:bg-amber-500 selection:text-stone-950 overflow-x-hidden">
+      {/* 1. Cyber Ambient Particle Horizon Background */}
+      <CyberBackground />
 
-      {/* New Release Alert Banner */}
-      {newReleaseToken && (
-        <div className="bg-gradient-to-r from-amber-700/30 via-amber-600/20 to-amber-700/30 border border-amber-600/60 rounded-xl p-3 mb-3 flex items-center justify-between gap-3 shadow-lg shadow-amber-950/40 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-2.5">
-            <Rocket className="w-5 h-5 text-amber-400 shrink-0" />
-            <div>
-              <strong className="text-amber-300 text-xs tracking-wider uppercase block">
-                {dict.newReleaseTitle}
-              </strong>
-              <span className="text-xs text-[#d6c5b6]">
-                {newReleaseToken.symbol} ({newReleaseToken.name}) launched on brew.family!
-              </span>
+      {/* 2. Top Live Real-Time Cyber Marquee */}
+      <LiveCyberMarquee
+        tokens={tokens}
+        totalLaunches={totalLaunches}
+        totalVolume={stats.totalTrackedVol}
+        lang={lang}
+        onSelectToken={handleAnalyzeToken}
+      />
+
+      <div className="p-3 sm:p-5 relative z-10">
+        {/* New Release Alert Banner */}
+        {newReleaseToken && (
+          <div className="max-w-7xl mx-auto bg-gradient-to-r from-amber-600/30 via-amber-500/20 to-amber-600/30 border border-amber-400/70 rounded-2xl p-3.5 mb-4 flex items-center justify-between gap-3 shadow-2xl shadow-amber-950/60 animate-in fade-in slide-in-from-top-2 duration-300 light-sweep-effect backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 animate-pulse">
+                <Rocket className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <strong className="text-amber-300 text-xs font-mono tracking-widest uppercase block font-black">
+                    {dict.newReleaseTitle}
+                  </strong>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                </div>
+                <span className="text-xs text-[#f5ede4] font-medium">
+                  <strong>${newReleaseToken.symbol}</strong> ({newReleaseToken.name}) launched on brew.family!
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleAnalyzeToken(newReleaseToken)}
+                className="px-3.5 py-1.5 text-xs font-black rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-stone-950 hover:from-amber-300 hover:to-amber-400 shadow-md shadow-amber-950/50 cursor-pointer"
+              >
+                Inspect ↗
+              </button>
+              <button
+                onClick={() => setNewReleaseToken(null)}
+                className="text-[#a89586] hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-amber-950/40"
+              >
+                ✕
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+        )}
+
+        {/* Main Container */}
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <Header
+            totalCount={totalLaunches}
+            factoryAddress={FACTORY_ADDRESS}
+            lang={lang}
+            onSetLang={handleSetLang}
+            isSyncing={isSyncing}
+            onSync={() => loadData(true)}
+            onShowToast={showToast}
+            visitorStats={visitorStats}
+          />
+
+          {/* Futuristic Navigation Tabs */}
+          <div className="flex items-center gap-2 border-b border-amber-900/40 mb-6 pb-2 overflow-x-auto scrollbar-none">
             <button
-              onClick={() => handleAnalyzeToken(newReleaseToken)}
-              className="px-3 py-1 text-xs font-bold rounded-lg bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-sm"
+              onClick={() => setActiveTab('radar')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                activeTab === 'radar'
+                  ? 'bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-transparent text-amber-300 border border-amber-400/80 shadow-lg shadow-amber-950/60 ring-1 ring-amber-400/30'
+                  : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1f1510]/60 border border-transparent'
+              }`}
             >
-              Inspect ↗
+              <span className="text-amber-400 font-normal">📊</span>
+              <span>{dict.tabRadar}</span>
+              {activeTab === 'radar' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />}
             </button>
             <button
-              onClick={() => setNewReleaseToken(null)}
-              className="text-[#a89586] hover:text-white text-xs px-1.5 py-1"
+              onClick={() => setActiveTab('copilot')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                activeTab === 'copilot'
+                  ? 'bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-transparent text-amber-300 border border-amber-400/80 shadow-lg shadow-amber-950/60 ring-1 ring-amber-400/30'
+                  : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1f1510]/60 border border-transparent'
+              }`}
             >
-              ✕
+              <span className="text-amber-400 font-normal">🤖</span>
+              <span>{dict.tabCopilot}</span>
+              {activeTab === 'copilot' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />}
+            </button>
+            <button
+              onClick={() => setActiveTab('picks')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                activeTab === 'picks'
+                  ? 'bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-transparent text-amber-300 border border-amber-400/80 shadow-lg shadow-amber-950/60 ring-1 ring-amber-400/30'
+                  : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1f1510]/60 border border-transparent'
+              }`}
+            >
+              <span className="text-amber-400 font-normal">🏆</span>
+              <span>{dict.tabPicks}</span>
+              {activeTab === 'picks' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />}
+            </button>
+            <button
+              onClick={() => setActiveTab('devs')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                activeTab === 'devs'
+                  ? 'bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-transparent text-amber-300 border border-amber-400/80 shadow-lg shadow-amber-950/60 ring-1 ring-amber-400/30'
+                  : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1f1510]/60 border border-transparent'
+              }`}
+            >
+              <span className="text-amber-400 font-normal">🕵️</span>
+              <span>{dict.tabDevs}</span>
+              {activeTab === 'devs' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <Header
-          totalCount={totalLaunches}
-          factoryAddress={FACTORY_ADDRESS}
-          lang={lang}
-          onSetLang={handleSetLang}
-          isSyncing={isSyncing}
-          onSync={() => loadData(true)}
-          onShowToast={showToast}
-          visitorStats={visitorStats}
-        />
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 border-b border-[#38281e] mb-4 pb-1 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('radar')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeTab === 'radar'
-                ? 'bg-gradient-to-r from-[#2c1d15] to-[#241710] text-amber-300 border border-amber-600/50 shadow-sm shadow-amber-950/40'
-                : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1a130f]'
-            }`}
-          >
-            ☕ {dict.tabRadar}
-          </button>
-          <button
-            onClick={() => setActiveTab('copilot')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeTab === 'copilot'
-                ? 'bg-gradient-to-r from-[#2c1d15] to-[#241710] text-amber-300 border border-amber-600/50 shadow-sm shadow-amber-950/40'
-                : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1a130f]'
-            }`}
-          >
-            🤖 {dict.tabCopilot}
-          </button>
-          <button
-            onClick={() => setActiveTab('picks')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeTab === 'picks'
-                ? 'bg-gradient-to-r from-[#2c1d15] to-[#241710] text-amber-300 border border-amber-600/50 shadow-sm shadow-amber-950/40'
-                : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1a130f]'
-            }`}
-          >
-            💎 {dict.tabPicks}
-          </button>
-          <button
-            onClick={() => setActiveTab('devs')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeTab === 'devs'
-                ? 'bg-gradient-to-r from-[#2c1d15] to-[#241710] text-amber-300 border border-amber-600/50 shadow-sm shadow-amber-950/40'
-                : 'text-[#a89586] hover:text-[#f7f0e8] hover:bg-[#1a130f]'
-            }`}
-          >
-            🕵️ {dict.tabDevs}
-          </button>
-        </div>
 
         {/* Global Metrics Bar */}
         <MetricsBar
@@ -445,6 +491,7 @@ export default function App() {
           <span>{toastMessage}</span>
         </div>
       )}
+      </div>
     </div>
   );
 }

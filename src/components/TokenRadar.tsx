@@ -323,7 +323,7 @@ export const TokenRadar: React.FC<TokenRadarProps> = ({
                 : 'text-[#a89586] hover:text-[#f7f0e8] bg-[#1d1510] border border-[#38281e]'
             }`}
           >
-            🕵️ {lang === 'zh' ? '开发者聚类' : 'Dev Clusters'} ({totalSerialTokens > 0 ? `${totalSerialTokens} ${lang === 'zh' ? '代币' : 'Tokens'}` : '>1 Token'})
+            🕵️ {lang === 'zh' ? '开发者聚类' : lang === 'ja' ? '開発者クラスター' : 'Dev Clusters'} ({totalSerialTokens > 0 ? `${totalSerialTokens} ${lang === 'zh' ? '代币' : lang === 'ja' ? 'トークン' : 'Tokens'}` : '>1 Token'})
           </button>
         </div>
 
@@ -394,228 +394,246 @@ export const TokenRadar: React.FC<TokenRadarProps> = ({
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-[#18120d] border border-[#38281e] rounded-xl overflow-x-auto shadow-xl shadow-black/30">
-        <table className="w-full min-w-[960px] text-left text-xs text-[#d6c5b6]">
-          <thead className="bg-[#1f1610] text-[#a89586] uppercase tracking-wider text-[11px] font-bold border-b border-[#38281e]">
-            <tr>
-              <th
-                onClick={() => handleSort('rank')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thRank}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('priceUsd')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thPrice}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('priceChange24h')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thChange}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('marketCap')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thMcap}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('volume24h')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thVol}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('liquidityUsd')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thLiq}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('creatorLaunchCount')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thDev}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('agentScore')}
-                className="px-4 py-3 cursor-pointer hover:text-amber-300 transition-colors"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{dict.thScore}</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </div>
-              </th>
-              <th className="px-4 py-3">{dict.thActions}</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-[#2d1f17]">
-            {pagedTokens.length === 0 ? (
+      {/* Main Table Container */}
+      <div className="cyber-glass rounded-2xl overflow-hidden border border-amber-900/40 shadow-2xl shadow-black/60">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] text-left text-xs text-[#d6c5b6]">
+            <thead className="bg-[#1a110b]/90 text-amber-300/80 uppercase tracking-widest text-[10px] font-mono font-bold border-b border-amber-900/50">
               <tr>
-                <td colSpan={9} className="py-12 text-center text-[#8a7667]">
-                  <div>No tokens found matching the current search filters.</div>
-                  {searchQuery && (
-                    <button
-                      onClick={() => onLiveSearch(searchQuery)}
-                      className="mt-3 px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500 text-stone-950 hover:bg-amber-400"
-                    >
-                      Search Live on Brew.family &amp; BSC
-                    </button>
-                  )}
-                </td>
+                <th
+                  onClick={() => handleSort('rank')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thRank}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('priceUsd')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thPrice}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('priceChange24h')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thChange}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('marketCap')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thMcap}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('volume24h')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thVol}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('liquidityUsd')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thLiq}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('creatorLaunchCount')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thDev}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('agentScore')}
+                  className="px-4 py-3.5 cursor-pointer hover:text-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{dict.thScore}</span>
+                    <ArrowUpDown className="w-3 h-3 text-amber-500/50" />
+                  </div>
+                </th>
+                <th className="px-4 py-3.5">{dict.thActions}</th>
               </tr>
-            ) : (
-              pagedTokens.map((t, idx) => {
-                const globalIdx = startIdx + idx + 1;
-                const chg = t.priceChange24h || 0;
-                const cAddr = (t.creator || '').toLowerCase().trim();
-                const devCount = cAddr ? Math.max(t.creatorLaunchCount || 1, devCounts[cAddr] || 1) : (t.creatorLaunchCount || 1);
+            </thead>
 
-                return (
-                  <tr
-                    key={t.address}
-                    className="hover:bg-[#241a13]/70 transition-colors group"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <span className="font-mono text-[#8a7667] text-[11px] w-6">
-                          #{globalIdx}
-                        </span>
-                        <TokenAvatar
-                          symbol={t.symbol}
-                          address={t.address}
-                          logoUrl={t.logoUrl}
-                          fallbackLogoUrl={t.fallbackLogoUrl}
-                          onchainArtworkContract={t.onchainArtworkContract}
-                          size="md"
-                        />
-                        <div>
-                          <div className="font-bold text-[#fdf9f4] flex items-center gap-1.5">
-                            <span>{t.symbol}</span>
-                            <span className="text-[10px] font-mono text-[#9e8979] bg-[#221711] px-1 rounded">
-                              /{t.quoteSymbol || 'WBNB'}
-                            </span>
-                            {globalIdx <= 3 && filterType === 'newest' && (
-                              <span className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-600/50">
-                                NEW
+            <tbody className="divide-y divide-amber-950/40">
+              {pagedTokens.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-14 text-center text-[#8a7667]">
+                    <div className="text-sm font-semibold">No tokens found matching the current search filters.</div>
+                    {searchQuery && (
+                      <button
+                        onClick={() => onLiveSearch(searchQuery)}
+                        className="mt-3.5 px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-stone-950 hover:from-amber-300 hover:to-amber-400 shadow-md shadow-amber-950/40"
+                      >
+                        Search Live on Brew.family &amp; BSC
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                pagedTokens.map((t, idx) => {
+                  const globalIdx = startIdx + idx + 1;
+                  const chg = t.priceChange24h || 0;
+                  const cAddr = (t.creator || '').toLowerCase().trim();
+                  const devCount = cAddr ? Math.max(t.creatorLaunchCount || 1, devCounts[cAddr] || 1) : (t.creatorLaunchCount || 1);
+                  const isTopGainer = chg >= 50;
+
+                  return (
+                    <tr
+                      key={t.address}
+                      className="hover:bg-amber-950/25 transition-all group duration-200"
+                    >
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-mono text-[#8a7667] text-[11px] w-6 font-bold group-hover:text-amber-400 transition-colors">
+                            #{globalIdx}
+                          </span>
+                          <TokenAvatar
+                            symbol={t.symbol}
+                            address={t.address}
+                            logoUrl={t.logoUrl}
+                            fallbackLogoUrl={t.fallbackLogoUrl}
+                            onchainArtworkContract={t.onchainArtworkContract}
+                            size="md"
+                          />
+                          <div>
+                            <div className="font-bold text-[#fdf9f4] flex items-center gap-1.5">
+                              <span className="group-hover:text-amber-300 transition-colors font-mono">{t.symbol}</span>
+                              <span className="text-[9px] font-mono text-[#9e8979] bg-[#1a110a] px-1.5 py-0.5 rounded border border-amber-900/30">
+                                /{t.quoteSymbol || 'WBNB'}
                               </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-[#a89586] max-w-[130px] truncate" title={t.name}>
-                            {t.name}
+                              {globalIdx <= 3 && filterType === 'newest' && (
+                                <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/50 animate-pulse">
+                                  NEW
+                                </span>
+                              )}
+                              {isTopGainer && (
+                                <span className="text-[9px] font-mono font-black px-1 py-0.2 rounded bg-amber-500 text-stone-950 shadow-sm animate-bounce">
+                                  🔥
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-[#a89586] max-w-[130px] truncate font-sans" title={t.name}>
+                              {t.name}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-4 py-3 font-mono font-semibold text-[#fdf9f4]">
-                      {formatUsd(t.priceUsd > 0 ? t.priceUsd : (t.marketCap > 0 ? t.marketCap / 1000000000 : 0))}
-                    </td>
+                      <td className="px-4 py-3.5 font-mono font-bold text-[#fdf9f4]">
+                        {formatUsd(t.priceUsd > 0 ? t.priceUsd : (t.marketCap > 0 ? t.marketCap / 1000000000 : 0))}
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold ${
-                          chg > 0
-                            ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-600/30'
-                            : chg < 0
-                            ? 'bg-rose-950/50 text-rose-400 border border-rose-600/30'
-                            : 'bg-[#221711] text-[#9e8979]'
-                        }`}
-                      >
-                        {formatPct(chg)}
-                      </span>
-                    </td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-mono font-bold shadow-sm ${
+                            chg > 0
+                              ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                              : chg < 0
+                              ? 'bg-rose-950/80 text-rose-300 border border-rose-500/40'
+                              : 'bg-[#1e140e] text-[#9e8979]'
+                          }`}
+                        >
+                          {formatPct(chg)}
+                        </span>
+                      </td>
 
-                    <td className="px-4 py-3 font-mono text-[#d6c5b6]">{formatUsd(t.marketCap)}</td>
-                    <td className="px-4 py-3 font-mono text-[#d6c5b6]">{formatUsd(t.volume24h)}</td>
-                    <td className="px-4 py-3 font-mono text-[#d6c5b6]">{formatUsd(t.liquidityUsd)}</td>
+                      <td className="px-4 py-3.5 font-mono font-semibold text-[#e8ded5]">{formatUsd(t.marketCap)}</td>
+                      <td className="px-4 py-3.5 font-mono font-semibold text-[#e8ded5]">{formatUsd(t.volume24h)}</td>
+                      <td className="px-4 py-3.5 font-mono font-semibold text-[#e8ded5]">{formatUsd(t.liquidityUsd)}</td>
 
-                    <td className="px-4 py-3">
-                      <div
-                        onClick={() => t.creator && onFilterByDev(t.creator)}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        {devCount >= 4 ? (
-                          <span className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-600/40">
-                            🚨 Serial ({devCount})
-                          </span>
-                        ) : devCount > 1 ? (
-                          <span className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#2e1d13] text-amber-300 border border-amber-600/40">
-                            ⚠️ Multi ({devCount})
-                          </span>
-                        ) : (
-                          <span className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-600/40">
-                            ✓ Single Dev
-                          </span>
-                        )}
-                        <div className="text-[10px] font-mono text-[#8a7667] mt-0.5">
-                          {truncateAddr(t.creator)}
+                      <td className="px-4 py-3.5">
+                        <div
+                          onClick={() => t.creator && onFilterByDev(t.creator)}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                          {devCount >= 4 ? (
+                            <span className="inline-flex text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-500/50">
+                              🚨 Serial ({devCount})
+                            </span>
+                          ) : devCount > 1 ? (
+                            <span className="inline-flex text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/50">
+                              ⚠️ Multi ({devCount})
+                            </span>
+                          ) : (
+                            <span className="inline-flex text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/50">
+                              🛡️ Single Dev
+                            </span>
+                          )}
+                          <div className="text-[10px] font-mono text-[#8a7667] mt-0.5 group-hover:text-[#a89586]">
+                            {truncateAddr(t.creator)}
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 font-mono font-bold text-[11px] px-2 py-0.5 rounded-md border ${
-                          t.agentScore >= 65
-                            ? 'bg-emerald-950/60 text-emerald-300 border-emerald-600/40'
-                            : t.agentScore >= 45
-                            ? 'bg-[#2d1e14] text-amber-300 border-amber-600/40'
-                            : 'bg-[#221711] text-[#9e8979] border-[#38281e]'
-                        }`}
-                      >
-                        ★ {t.agentScore}/100
-                      </span>
-                    </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1 font-mono font-bold text-[10px] px-2 py-0.5 rounded-md border w-fit ${
+                              t.agentScore >= 65
+                                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                                : t.agentScore >= 45
+                                ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                                : 'bg-[#1f150f] text-[#9e8979] border-amber-900/30'
+                            }`}
+                          >
+                            ★ {t.agentScore}/100
+                          </span>
+                          <div className="w-16 h-1 rounded-full bg-stone-900 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                t.agentScore >= 65 ? 'bg-emerald-400' : t.agentScore >= 45 ? 'bg-amber-400' : 'bg-stone-600'
+                              }`}
+                              style={{ width: `${Math.min(t.agentScore, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => onAnalyze(t)}
-                          className="px-2.5 py-1 text-[11px] font-bold rounded bg-[#261b14] text-amber-300 border border-amber-600/40 hover:bg-amber-600 hover:text-stone-950 transition-all shadow-sm"
-                        >
-                          🔍 {dict.btnAnalyze}
-                        </button>
-                        <button
-                          onClick={() => onTrade(t)}
-                          className="px-2.5 py-1 text-[11px] font-bold rounded bg-gradient-to-r from-amber-600 to-amber-500 text-stone-950 hover:from-amber-500 hover:to-amber-400 transition-all shadow-sm shadow-amber-950/30"
-                        >
-                          ⚡ {dict.btnSwap}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => onAnalyze(t)}
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[#221711] text-amber-300 border border-amber-600/40 hover:bg-amber-500 hover:text-stone-950 transition-all shadow-sm cursor-pointer"
+                          >
+                            🔍 {dict.btnAnalyze}
+                          </button>
+                          <button
+                            onClick={() => onTrade(t)}
+                            className="px-2.5 py-1 text-[11px] font-black rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-stone-950 hover:from-amber-400 hover:to-yellow-400 transition-all shadow-md shadow-amber-950/40 cursor-pointer"
+                          >
+                            ⚡ {dict.btnSwap}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination Footer */}
