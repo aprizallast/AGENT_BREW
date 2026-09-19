@@ -55,7 +55,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
     .sort((a, b) => (b.agentScore || 0) - (a.agentScore || 0))
     .slice(0, 5);
 
-  const handleSend = (queryText: string) => {
+  const handleSend = async (queryText: string) => {
     const q = queryText.trim();
     if (!q || isLoading) return;
 
@@ -69,9 +69,36 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
     setInputVal('');
     setIsLoading(true);
 
+    // 1. Attempt Server Copilot (Groq Llama 3 / Server Tactical)
+    try {
+      const res = await fetch('/api/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: q, lang })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.reply) {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: 'a-' + Date.now(),
+              sender: 'agent',
+              text: data.reply,
+              tokensMatch: data.tokensMatch && data.tokensMatch.length > 0 ? data.tokensMatch : undefined
+            }
+          ]);
+          setIsLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to client fallback
+    }
+
     const qLower = q.toLowerCase();
 
-    // Pure manual deterministic tactical rule engine
+    // 2. Client-side deterministic tactical rule fallback
     setTimeout(() => {
       let reply = '';
       let matchedTokens: Token[] = [];
@@ -109,6 +136,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
         qLower.includes('risk') ||
         qLower.includes('rug') ||
         qLower.includes('scam') ||
+        qLower.includes('bahaya') ||
         qLower.includes('跑路') ||
         qLower.includes('风险') ||
         qLower.includes('连环') ||
@@ -126,6 +154,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
         }
       } else if (
         qLower.includes('safe') ||
+        qLower.includes('aman') ||
         qLower.includes('single') ||
         qLower.includes('gem') ||
         qLower.includes('solid') ||
@@ -149,6 +178,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
       } else if (
         qLower.includes('vol') ||
         qLower.includes('volume') ||
+        qLower.includes('rame') ||
         qLower.includes('交易量') ||
         qLower.includes('热门') ||
         qLower.includes('取引高')
@@ -168,6 +198,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
       } else if (
         qLower.includes('fresh') ||
         qLower.includes('new') ||
+        qLower.includes('baru') ||
         qLower.includes('最新') ||
         qLower.includes('新币') ||
         qLower.includes('新規')
@@ -225,7 +256,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
           } else if (lang === 'ja') {
             reply = `🤖 **戦術コパイロット端末:**\n"${q}" に一致するトークンは見つかりませんでした。\n\n💡 *ヒント*: トークンシンボル (例: "BREW")、コントラクトアドレス (0x...)、またはクイックコマンド ("厳選", "単一開発者", "連続発行者", "取引高", "最新") を入力してください。`;
           } else {
-            reply = `🤖 **MANUAL TACTICAL ENGINE:**\nNo specific token found matching "${q}".\n\n💡 *Tips*: Type a token symbol (e.g. "BREW"), contract address (0x...), or quick commands ("top picks", "single dev", "serial devs", "volume", "fresh").`;
+            reply = `🤖 **TACTICAL INTEL ENGINE:**\nNo specific token found matching "${q}".\n\n💡 *Tips*: Type a token symbol (e.g. "BREW"), contract address (0x...), or quick commands ("top picks", "single dev", "serial devs", "volume", "fresh").`;
           }
         }
       }
@@ -240,7 +271,7 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
         }
       ]);
       setIsLoading(false);
-    }, 200);
+    }, 150);
   };
 
   return (
@@ -253,13 +284,13 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
           </div>
-          <div className="font-mono text-[11px] font-bold text-amber-300 tracking-wider flex items-center gap-1.5">
-            <span>☕</span>
+          <div className="font-mono text-[11px] font-bold text-amber-300 tracking-wider flex items-center gap-2">
+            <img src="/logo.jpg" alt="Agent Brew Logo" className="w-4 h-4 rounded-full object-cover border border-amber-500/40" referrerPolicy="no-referrer" />
             <span>AGENT_BREW_CORE // TACTICAL TERMINAL</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-mono font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>{lang === 'zh' ? '确定性引擎就绪' : lang === 'ja' ? '決定論エンジン稼働中' : 'DETERMINISTIC ENGINE'}</span>
+            <span>{lang === 'zh' ? '确定性引擎就绪' : lang === 'ja' ? '決定論エンジン稼働中' : 'TACTICAL ENGINE'}</span>
           </div>
         </div>
 
@@ -271,8 +302,8 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
               className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {m.sender === 'agent' && (
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs bg-[#2b1d14] text-amber-300 border border-amber-600/40 shrink-0 mt-0.5 shadow-sm">
-                  ☕
+                <div className="w-7 h-7 rounded-lg overflow-hidden border border-amber-500/50 shrink-0 mt-0.5 shadow-md shadow-amber-950/40 bg-[#2b1d14] flex items-center justify-center">
+                  <img src="/logo.jpg" alt="Agent Brew" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
               )}
 
@@ -323,8 +354,8 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
 
           {isLoading && (
             <div className="flex gap-2.5 self-start">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs bg-[#2b1d14] text-amber-300 border border-amber-600/40">
-                ☕
+              <div className="w-7 h-7 rounded-lg overflow-hidden border border-amber-500/50 shrink-0 shadow-md bg-[#2b1d14] flex items-center justify-center">
+                <img src="/logo.jpg" alt="Agent Brew" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="p-3 rounded-xl text-xs bg-[#1f1610] border border-[#38281e] text-amber-300 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
@@ -400,8 +431,8 @@ export const CopilotTerminal: React.FC<CopilotTerminalProps> = ({
       <div className="flex flex-col gap-3">
         <div className="bg-[#18120d] border border-[#38281e] rounded-xl p-3.5 shadow-md shadow-black/20">
           <div className="text-xs font-bold text-[#fdf9f4] flex items-center justify-between mb-2.5 tracking-wider uppercase">
-            <span className="flex items-center gap-1">
-              <span>☕</span>
+            <span className="flex items-center gap-1.5">
+              <img src="/logo.jpg" alt="Logo" className="w-4 h-4 rounded-full object-cover border border-amber-500/40" referrerPolicy="no-referrer" />
               <span>{dict.copilotTopPicksTitle}</span>
             </span>
             <span className="text-emerald-400 text-[10px] font-mono">LIVE</span>

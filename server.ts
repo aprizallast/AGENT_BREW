@@ -464,61 +464,203 @@ app.get('/api/artwork/:address', async (req, res) => {
   }
 });
 
-// 7. Tactical Copilot chat (Manual Rule & Intelligence Engine - No GenAI)
+// Cached active Groq model
+let cachedGroqModel: string | null = null;
+let lastGroqModelCheck = 0;
+
+async function getAvailableGroqModel(groqKey: string): Promise<string> {
+  const now = Date.now();
+  if (cachedGroqModel && now - lastGroqModelCheck < 3600000) {
+    return cachedGroqModel;
+  }
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { 'Authorization': `Bearer ${groqKey.trim()}` }
+    });
+    if (res.ok) {
+      const data: any = await res.json();
+      const modelIds: string[] = (data?.data || []).map((m: any) => m.id).filter(Boolean);
+      console.log(`[Groq] Discovered ${modelIds.length} active models in account:`, modelIds.slice(0, 8).join(', '));
+      
+      // Preference hierarchy
+      const preferences = [
+        'llama-3.3-70b-versatile',
+        'llama3-70b-8192',
+        'llama-3.1-70b-versatile',
+        'deepseek-r1-distill-llama-70b',
+        'qwen-2.5-32b',
+        'llama3-8b-8192',
+        'llama-3.1-8b-instant',
+        'gemma2-9b-it',
+        'llama-3.2-3b-preview',
+        'llama-3.2-1b-preview'
+      ];
+
+      for (const pref of preferences) {
+        if (modelIds.includes(pref)) {
+          cachedGroqModel = pref;
+          lastGroqModelCheck = now;
+          console.log(`[Groq] Selected best model: ${cachedGroqModel}`);
+          return cachedGroqModel;
+        }
+      }
+
+      // If none of the specific preferences matched, pick first chat/text model
+      const chatModel = modelIds.find(id => !id.includes('whisper') && !id.includes('vision') && !id.includes('embed'));
+      if (chatModel) {
+        cachedGroqModel = chatModel;
+        lastGroqModelCheck = now;
+        return cachedGroqModel;
+      }
+    }
+  } catch (err: any) {
+    console.warn(`[Groq] Failed to fetch /models:`, err.message);
+  }
+
+  return 'llama3-70b-8192';
+}
+
+// Helper to query Groq Cloud for tactical copilot intelligence
+async function queryGroqLlama(prompt: string, tokens: any[], stats: any): Promise<string | null> {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey || !groqKey.trim()) return null;
+
+  try {
+    const topTokens = [...tokens]
+      .filter(t => t.volume24h > 0 || t.liquidityUsd > 100)
+      .sort((a, b) => (b.agentScore || 0) - (a.agentScore || 0))
+      .slice(0, 8)
+      .map(t => `#${t.symbol} (${t.name}): Score ${t.agentScore}/100, MCap $${Math.round(t.marketCap || 0)}, Liq $${Math.round(t.liquidityUsd || 0)}, Vol $${Math.round(t.volume24h || 0)}, DevLaunches: ${t.creatorLaunchCount}`);
+
+    const systemPrompt = `You are Agent BREW, an elite autonomous on-chain tactical crypto analyzer and degen scout for BREW Factory (0xeea6c3bfb29fd9a35380438956bae7b109c63d85) on BNB Chain.
+Current Real-Time On-Chain Radar Context:
+- Total Tracked BSC Tokens: ${tokens.length}
+- 24h Total Volume: $${stats?.totalTrackedVol || 0}
+- Total Market Cap: $${stats?.totalTrackedMcap || 0}
+- Top Scored High Conviction Tokens: ${topTokens.join(' | ')}
+
+Instructions:
+1. Provide sharp, concise, military-grade cyberpunk tactical insights formatted with markdown, bullet points, and emojis.
+2. If the user asks in Indonesian (e.g. rekomendasi, koin bagus, aman, apa yang menarik), reply in Indonesian with sharp crypto analysis.
+3. If the user asks in Chinese or Japanese, reply in that language. Otherwise, default to concise English.
+4. Warn clearly about serial deployers (devs with ≥4 launches on BREW) due to abandonment risk.
+5. Highlight tokens with single-contract devs, strong liquidity, and score ≥70.
+6. Keep responses under 200 words.`;
+
+    const chosenModel = await getAvailableGroqModel(groqKey);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey.trim()}`
+      },
+      body: JSON.stringify({
+        model: chosenModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.5,
+        max_tokens: 500
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const data: any = await response.json();
+      return data?.choices?.[0]?.message?.content || null;
+    } else {
+      const errBody = await response.text();
+      console.warn(`[Groq] Model ${chosenModel} returned status ${response.status}: ${errBody}`);
+      // Invalidate cache if model failed
+      cachedGroqModel = null;
+      return null;
+    }
+  } catch (err: any) {
+    console.warn(`[Groq] Execution error, falling back to deterministic:`, err.message);
+    return null;
+  }
+}
+
+// 7. Tactical Copilot chat (Groq Llama 3 with Instant Deterministic Fallback)
 app.post('/api/copilot', async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
-    // Tactical deterministic manual intelligence engine
     const p = String(prompt).toLowerCase().trim();
     const tokens: any[] = cachedSnapshot?.tokens || [];
     let reply = '';
     let matchedTokens: any[] = [];
+    let engine = 'deterministic';
 
-    if (p.includes('top') || p.includes('pick') || p.includes('rekomendasi') || p.includes('best') || p.includes('bagus')) {
-      const best = [...tokens].filter(t => t.volume24h > 0 || t.liquidityUsd > 100).sort((a, b) => (b.agentScore || 0) - (a.agentScore || 0)).slice(0, 3);
-      matchedTokens = best;
-      if (best.length > 0) {
-        reply = `🎯 **AGENT BREW TOP CONVICTION PICKS (MANUAL ENGINE):**\n\n` +
-          best.map((tok, i) => `**#${i+1} ${tok.symbol} (${tok.name})**\n• Score: **${tok.agentScore}/100** [${tok.agentVerdict}]\n• MCap: $${Number(tok.marketCap || 0).toLocaleString()} | Liq: $${Number(tok.liquidityUsd || 0).toLocaleString()} | 24h Vol: $${Number(tok.volume24h || 0).toLocaleString()}\n• Signals: ${(tok.agentSignals || []).join(' • ')}`).join('\n\n') +
-          `\n\n*Tactical playbook: Position size 0.05 - 0.15 BNB with tight -25% stop loss.*`;
-      } else {
-        reply = `🎯 **AGENT BREW TACTICAL PICKS:**\n\n1. **Liquid Pools**: Filter tokens with >$1,000 liquidity to reduce slippage.\n2. **Single-Dev Deployers**: Devs with 1 contract show higher commitment.\n3. **Order Flow**: Buy ratio >1.5x signals continuous accumulation.`;
-      }
-    } else if (p.includes('serial') || p.includes('risk') || p.includes('rug') || p.includes('bahaya') || p.includes('scam')) {
-      const serials = tokens.filter(t => t.creatorLaunchCount >= 4);
-      matchedTokens = serials.slice(0, 3);
-      reply = `🚨 **SERIAL DEV CLUSTER RISK REPORT:**\n\nIdentified **${serials.length} tokens** launched by repeat deployers (≥4 contracts on factory 0xeea6...3d85).\nSerial deployers have high liquidity abandonment rates. Always inspect GoPlus honeypot status and BubbleMaps wallet clustering.`;
-    } else if (p.includes('safe') || p.includes('aman') || p.includes('single') || p.includes('gem')) {
-      const singles = tokens.filter(t => t.creatorLaunchCount === 1 && (t.liquidityUsd > 500 || t.agentScore >= 65)).sort((a, b) => (b.agentScore || 0) - (a.agentScore || 0)).slice(0, 3);
-      matchedTokens = singles;
-      reply = `🛡️ **SINGLE-DEV LIQUID GEMS (MANUAL AUDIT):**\n\nFound **${singles.length} tokens** with dedicated single-contract deployers and active pool depth. Single-project devs carry significantly lower rug likelihood.`;
-    } else if (p.includes('volume') || p.includes('vol') || p.includes('rame')) {
-      const vols = [...tokens].sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0)).slice(0, 3);
-      matchedTokens = vols;
-      reply = `⚡ **TOP 24H TRADING VOLUME LEADERS:**\n\n` +
-        vols.map((v, i) => `**#${i+1} ${v.symbol}**: $${Number(v.volume24h || 0).toLocaleString()} 24h vol | Liq: $${Number(v.liquidityUsd || 0).toLocaleString()}`).join('\n');
-    } else if (p.includes('fresh') || p.includes('new') || p.includes('baru')) {
-      const fresh = [...tokens].sort((a, b) => (b.launchedAt || 0) - (a.launchedAt || 0)).slice(0, 3);
-      matchedTokens = fresh;
-      reply = `🆕 **FRESHEST LAUNCHES ON BREW FACTORY:**\n\n` +
-        fresh.map((f, i) => `**#${i+1} ${f.symbol}**: ${f.name} (Launched ${new Date(f.launchedAt).toLocaleDateString()})`).join('\n');
-    } else {
-      const direct = tokens.find(t =>
-        t.symbol?.toLowerCase() === p ||
-        t.name?.toLowerCase() === p ||
-        t.address?.toLowerCase() === p
-      );
-      if (direct) {
-        matchedTokens = [direct];
-        reply = `📊 **TACTICAL AUDIT: ${direct.symbol} (${direct.name})**\n\n• Price: $${direct.priceUsd || 0} (${direct.priceChange24h > 0 ? '+' : ''}${Number(direct.priceChange24h || 0).toFixed(2)}%)\n• Market Cap: $${Number(direct.marketCap || 0).toLocaleString()} | Liquidity: $${Number(direct.liquidityUsd || 0).toLocaleString()}\n• 24h Volume: $${Number(direct.volume24h || 0).toLocaleString()} | Score: ${direct.agentScore}/100 [${direct.agentVerdict}]\n• Dev History: ${direct.creatorLaunchCount} contract(s) deployed.\n• Signals: ${(direct.agentSignals || []).join(' • ')}`;
-      } else {
-        reply = `🤖 **AGENT BREW TACTICAL ENGINE (MANUAL MODE)**\n\nSystem running deterministic on-chain analysis. Factory: \`0xeea6c3bfb29fd9a35380438956bae7b109c63d85\`.\n\nType any token symbol (e.g. *BREW*), contract address (\`0x...\`), or quick commands (*top picks*, *single dev*, *serial dev*, *volume*, *fresh*).`;
+    // 1. Try Groq Llama 3 first if key is configured
+    if (process.env.GROQ_API_KEY) {
+      const groqReply = await queryGroqLlama(prompt, tokens, cachedSnapshot?.stats);
+      if (groqReply) {
+        reply = groqReply;
+        engine = 'groq_llama3';
+        matchedTokens = tokens.filter(t =>
+          p.includes(t.symbol?.toLowerCase()) ||
+          p.includes(t.name?.toLowerCase()) ||
+          p.includes(t.address?.toLowerCase())
+        ).slice(0, 3);
       }
     }
 
-    res.json({ reply, tokensMatch: matchedTokens });
+    // 2. Deterministic manual intelligence engine fallback (100% reliable)
+    if (!reply) {
+      if (p.includes('top') || p.includes('pick') || p.includes('rekomendasi') || p.includes('best') || p.includes('bagus')) {
+        const best = [...tokens].filter(t => t.volume24h > 0 || t.liquidityUsd > 100).sort((a, b) => (b.agentScore || 0) - (a.agentScore || 0)).slice(0, 3);
+        matchedTokens = best;
+        if (best.length > 0) {
+          reply = `🎯 **AGENT BREW TOP CONVICTION PICKS (TACTICAL ENGINE):**\n\n` +
+            best.map((tok, i) => `**#${i+1} ${tok.symbol} (${tok.name})**\n• Score: **${tok.agentScore}/100** [${tok.agentVerdict}]\n• MCap: $${Number(tok.marketCap || 0).toLocaleString()} | Liq: $${Number(tok.liquidityUsd || 0).toLocaleString()} | 24h Vol: $${Number(tok.volume24h || 0).toLocaleString()}\n• Signals: ${(tok.agentSignals || []).join(' • ')}`).join('\n\n') +
+            `\n\n*Tactical playbook: Position size 0.05 - 0.15 BNB with tight -25% stop loss.*`;
+        } else {
+          reply = `🎯 **AGENT BREW TACTICAL PICKS:**\n\n1. **Liquid Pools**: Filter tokens with >$1,000 liquidity to reduce slippage.\n2. **Single-Dev Deployers**: Devs with 1 contract show higher commitment.\n3. **Order Flow**: Buy ratio >1.5x signals continuous accumulation.`;
+        }
+      } else if (p.includes('serial') || p.includes('risk') || p.includes('rug') || p.includes('bahaya') || p.includes('scam')) {
+        const serials = tokens.filter(t => t.creatorLaunchCount >= 4);
+        matchedTokens = serials.slice(0, 3);
+        reply = `🚨 **SERIAL DEV CLUSTER RISK REPORT:**\n\nIdentified **${serials.length} tokens** launched by repeat deployers (≥4 contracts on factory 0xeea6...3d85).\nSerial deployers have high liquidity abandonment rates. Always inspect GoPlus honeypot status and BubbleMaps wallet clustering.`;
+      } else if (p.includes('safe') || p.includes('aman') || p.includes('single') || p.includes('gem')) {
+        const singles = tokens.filter(t => t.creatorLaunchCount === 1 && (t.liquidityUsd > 500 || t.agentScore >= 65)).sort((a, b) => (b.agentScore || 0) - (a.agentScore || 0)).slice(0, 3);
+        matchedTokens = singles;
+        reply = `🛡️ **SINGLE-DEV LIQUID GEMS (TACTICAL AUDIT):**\n\nFound **${singles.length} tokens** with dedicated single-contract deployers and active pool depth. Single-project devs carry significantly lower rug likelihood.`;
+      } else if (p.includes('volume') || p.includes('vol') || p.includes('rame')) {
+        const vols = [...tokens].sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0)).slice(0, 3);
+        matchedTokens = vols;
+        reply = `⚡ **TOP 24H TRADING VOLUME LEADERS:**\n\n` +
+          vols.map((v, i) => `**#${i+1} ${v.symbol}**: $${Number(v.volume24h || 0).toLocaleString()} 24h vol | Liq: $${Number(v.liquidityUsd || 0).toLocaleString()}`).join('\n');
+      } else if (p.includes('fresh') || p.includes('new') || p.includes('baru')) {
+        const fresh = [...tokens].sort((a, b) => (b.launchedAt || 0) - (a.launchedAt || 0)).slice(0, 3);
+        matchedTokens = fresh;
+        reply = `🆕 **FRESHEST LAUNCHES ON BREW FACTORY:**\n\n` +
+          fresh.map((f, i) => `**#${i+1} ${f.symbol}**: ${f.name} (Launched ${new Date(f.launchedAt).toLocaleDateString()})`).join('\n');
+      } else {
+        const direct = tokens.find(t =>
+          t.symbol?.toLowerCase() === p ||
+          t.name?.toLowerCase() === p ||
+          t.address?.toLowerCase() === p
+        );
+        if (direct) {
+          matchedTokens = [direct];
+          reply = `📊 **TACTICAL AUDIT: ${direct.symbol} (${direct.name})**\n\n• Price: $${direct.priceUsd || 0} (${direct.priceChange24h > 0 ? '+' : ''}${Number(direct.priceChange24h || 0).toFixed(2)}%)\n• Market Cap: $${Number(direct.marketCap || 0).toLocaleString()} | Liquidity: $${Number(direct.liquidityUsd || 0).toLocaleString()}\n• 24h Volume: $${Number(direct.volume24h || 0).toLocaleString()} | Score: ${direct.agentScore}/100 [${direct.agentVerdict}]\n• Dev History: ${direct.creatorLaunchCount} contract(s) deployed.\n• Signals: ${(direct.agentSignals || []).join(' • ')}`;
+        } else {
+          reply = `🤖 **AGENT BREW TACTICAL TERMINAL**\n\nAutonomous on-chain analysis active for factory \`0xeea6c3bfb29fd9a35380438956bae7b109c63d85\`.\n\nType any token symbol (e.g. *BREW*), contract address (\`0x...\`), or quick commands (*top picks*, *single dev*, *serial dev*, *volume*, *fresh*).`;
+        }
+      }
+    }
+
+    res.json({ reply, tokensMatch: matchedTokens, engine });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Copilot query failed' });
   }
