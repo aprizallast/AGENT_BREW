@@ -10,21 +10,17 @@ import { DevClusterView } from './components/DevClusterView.tsx';
 import { DetailModal } from './components/DetailModal.tsx';
 import { useRealtimeVisitors } from './hooks/useRealtimeVisitors.ts';
 import { playAlertChime } from './utils/format.ts';
-import { fetchTokensWithFallback, inspectContractDirect } from './utils/directDataLoader.ts';
+import { fetchTokensWithFallback, inspectContractDirect, getInitialCachedPayload } from './utils/directDataLoader.ts';
 import { Rocket, ExternalLink } from 'lucide-react';
 
 const FACTORY_ADDRESS = '0xeea6c3bfb29fd9a35380438956bae7b109c63d85';
 
 export default function App() {
+  const initialData = React.useMemo(() => getInitialCachedPayload(), []);
   const { stats: visitorStats } = useRealtimeVisitors();
-  const [tokens, setTokens] = useState<Token[]>([]);
-  const [stats, setStats] = useState<MarketStats>({
-    totalTrackedVol: 0,
-    totalTrackedMcap: 0,
-    activePairs: 0,
-    multiTokenDevs: 0
-  });
-  const [totalLaunches, setTotalLaunches] = useState<number>(2081);
+  const [tokens, setTokens] = useState<Token[]>(initialData.tokens);
+  const [stats, setStats] = useState<MarketStats>(initialData.stats);
+  const [totalLaunches, setTotalLaunches] = useState<number>(initialData.totalLaunches || 2164);
   const [activeTab, setActiveTab] = useState<ViewTab>('radar');
   const [lang, setLang] = useState<Language>(() => {
     return (localStorage.getItem('agent_brew_lang') as Language) || 'en';

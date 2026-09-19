@@ -1,5 +1,8 @@
 const BREW_SHARED_API = 'https://brew.family/api/shared/launches';
 
+let memoryTokensCache: any = null;
+let memoryCacheTime = 0;
+
 async function enrichTokensWithDexScreener(tokens: any[]) {
   const pending = tokens.slice(0, 90);
   const chunks: any[][] = [];
@@ -60,6 +63,21 @@ async function enrichTokensWithDexScreener(tokens: any[]) {
 
 export default async function handler(req: any, res: any) {
   try {
+    const isForce = req.query?.force === 'true' || req.body?.force === true;
+    const now = Date.now();
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=120');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
+    if (!isForce && memoryTokensCache && (now - memoryCacheTime < 25000)) {
+      return res.status(200).json(memoryTokensCache);
+    }
+
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
@@ -247,8 +265,7 @@ export default async function handler(req: any, res: any) {
 
     const multiTokenDevsCount = Object.values(creatorCounts).filter((c: any) => c > 1).length;
 
-    res.setHeader('Cache-Control', 's-maxage=20, stale-while-revalidate=60');
-    return res.status(200).json({
+    const resultPayload = {
       totalLaunches: tokens.length,
       factory: '0xeea6c3bfb29fd9a35380438956bae7b109c63d85',
       updatedAt: Date.now(),
@@ -259,7 +276,12 @@ export default async function handler(req: any, res: any) {
         multiTokenDevs: multiTokenDevsCount
       },
       tokens
-    });
+    };
+
+    memoryTokensCache = resultPayload;
+    memoryCacheTime = Date.now();
+
+    return res.status(200).json(resultPayload);
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal error' });
   }
