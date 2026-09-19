@@ -16,6 +16,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(express.static(path.join(process.cwd(), 'public')));
 
 // Register Realtime Visitor Tracker & Supabase Ingestion Routes
 registerVisitorRoutes(app);
